@@ -487,8 +487,166 @@ Defined.
 
 Let IA := colimAlgInitial hsEndC InitialEndC is_omega_cocont_Id_H (Colims_of_shape_nat_graph_EndC _).
 
-Lemma ishssMor_InitAlg (T' : hss CP H) :
-  @ishssMor C hsC CP H InitHSS T'
+(* mes modifs *)
+Local Notation "f ⊕ g" := (BinCoproductOfArrows _ (CPEndC _ _ ) (CPEndC _ _ ) f g) (at level 40).
+Definition bracket_property' (T : algebra_ob Id_H) {Z : Ptd} (f : Z --> ptd_from_alg T)
+           (h : `T • (U Z)  --> `T) : UU
+  :=
+    alg_map _ T •• (U Z) · h =
+          identity (U Z) ⊕ θ (`T ⊗ Z) ·
+          identity (U Z) ⊕ #H h ·
+          BinCoproductArrow _ (CPEndC _ _ ) (#U f) (tau_from_alg T).
+
+Definition bracket_at' (T : algebra_ob Id_H) {Z : Ptd} (f : Z --> ptd_from_alg T): UU :=
+  ∑ h : `T • (U Z)  --> `T, bracket_property'    T f h.
+
+Definition bracket' (T : algebra_ob Id_H) : UU
+  := ∏ (Z : Ptd) (f : Z --> ptd_from_alg T), bracket_at' T f.
+Definition bracket_property_parts' (T : algebra_ob Id_H) {Z : Ptd} (f : Z --> ptd_from_alg T)
+           (h : `T • (U Z)  --> `T) : UU
+  :=
+    (#U f = η T •• (U Z) · h) ×
+     (θ (`T ⊗ Z) · #H h · τ T  = τ T •• (U Z) ·  h).
+
+Definition bracket_parts_at' (T : algebra_ob Id_H) {Z : Ptd} (f : Z --> ptd_from_alg T) : UU :=
+   ∑ h : `T • (U Z)  --> `T, bracket_property_parts' T f h.
+
+Definition bracket_parts' (T : algebra_ob Id_H) : UU
+  := ∏ (Z : Ptd) (f : Z --> ptd_from_alg T), bracket_parts_at' T f.
+
+(* show that for any h of suitable type, the following are equivalent *)
+
+Lemma parts_from_whole' (T : algebra_ob Id_H) (Z : Ptd) (f : Z --> ptd_from_alg T)
+      (h :  `T • (U Z)  --> `T) :
+  bracket_property' T f h → bracket_property_parts' T f h.
+Proof.
+  (* j'ai du modifier hs par hsC *)
+  intro Hyp.
+  split.
+  + unfold eta_from_alg.
+    apply nat_trans_eq; try (exact hsC).
+    intro c.
+    simpl.
+    unfold coproduct_nat_trans_in1_data.
+    assert (Hyp_inst := nat_trans_eq_pointwise Hyp c); clear Hyp.
+    apply (maponpaths (fun m => BinCoproductIn1 C (CP _ _)· m)) in Hyp_inst.
+    match goal with |[ H1 : _  = ?f |- _ = _   ] =>
+         pathvia (f) end.
+
+    * clear Hyp_inst.
+      rewrite <- assoc.
+      apply BinCoproductIn1Commutes_right_in_ctx_dir.
+      rewrite id_left.
+      apply BinCoproductIn1Commutes_right_in_ctx_dir.
+      rewrite id_left.
+      apply BinCoproductIn1Commutes_right_dir.
+      apply idpath.
+    * rewrite <- Hyp_inst; clear Hyp_inst.
+      rewrite <- assoc.
+      apply idpath.
+  + unfold tau_from_alg.
+    apply nat_trans_eq; try (exact hsC).
+    intro c.
+    simpl.
+    unfold coproduct_nat_trans_in2_data.
+    assert (Hyp_inst := nat_trans_eq_pointwise Hyp c); clear Hyp.
+    apply (maponpaths (fun m =>  BinCoproductIn2 C (CP _ _)· m)) in Hyp_inst.
+    match goal with |[ H1 : _  = ?f |- _ = _   ] =>
+         pathvia (f) end.
+
+    * clear Hyp_inst.
+      do 2 rewrite <- assoc.
+      apply BinCoproductIn2Commutes_right_in_ctx_dir.
+      simpl.
+      rewrite <- assoc.
+      apply maponpaths.
+      apply BinCoproductIn2Commutes_right_in_ctx_dir.
+      simpl.
+      rewrite <- assoc.
+      apply maponpaths.
+      unfold tau_from_alg.
+      apply BinCoproductIn2Commutes_right_dir.
+      apply idpath.
+    * rewrite <- Hyp_inst; clear Hyp_inst.
+      rewrite <- assoc.
+      apply idpath.
+Qed.
+Lemma whole_from_parts' (T : algebra_ob Id_H) (Z : Ptd) (f : Z --> ptd_from_alg T)
+      (h :  `T • (U Z)  --> `T) :
+  bracket_property_parts' T f h → bracket_property' T f h.
+Proof.
+  intros [Hyp1 Hyp2].
+  apply nat_trans_eq; try (exact hsC).
+  intro c.
+  apply BinCoproductArrow_eq_cor.
+  + clear Hyp2.
+    assert (Hyp1_inst := nat_trans_eq_pointwise Hyp1 c); clear Hyp1.
+    rewrite <- assoc.
+    apply BinCoproductIn1Commutes_right_in_ctx_dir.
+    rewrite id_left.
+    apply BinCoproductIn1Commutes_right_in_ctx_dir.
+    rewrite id_left.
+    apply BinCoproductIn1Commutes_right_dir.
+    simpl. simpl in Hyp1_inst.
+    rewrite Hyp1_inst.
+    simpl.
+    apply assoc.
+  + clear Hyp1.
+    assert (Hyp2_inst := nat_trans_eq_pointwise Hyp2 c); clear Hyp2.
+    rewrite <- assoc.
+    apply BinCoproductIn2Commutes_right_in_ctx_dir.
+    simpl.
+    rewrite assoc.
+    eapply pathscomp0.
+    * eapply pathsinv0.
+      exact Hyp2_inst.
+    * clear Hyp2_inst.
+      simpl.
+      do 2 rewrite <- assoc.
+      apply maponpaths.
+      apply BinCoproductIn2Commutes_right_in_ctx_dir.
+      simpl.
+      rewrite <- assoc.
+      apply maponpaths.
+      apply BinCoproductIn2Commutes_right_dir.
+      apply idpath.
+Qed.
+Definition hss' : UU := ∑ T, bracket' T.
+Coercion alg_from_hss' (T : hss') : algebra_ob Id_H := pr1 T.
+Definition fbracket' (T : hss') {Z : Ptd} (f : Z --> ptd_from_alg T)
+  : `T • (U Z) --> `T
+  := (pr1 (pr2 T Z f)).
+Notation "⦃ f ⦄" := (fbracket' _ f)(at level 0) : prime_scope.
+Delimit Scope prime_scope with prime.
+
+Definition isbracketMor' {T:hss CP H}{ T' : hss'} (β : algebra_mor _ T T') : UU :=
+    ∏ (Z : Ptd) (f : Z --> ptd_from_alg T),
+      (* (⦃ f ⦄ · β = β •• U Z · (⦃ f · # (ptd_from_alg_functor (hs:=hsC) CP H) β ⦄)%prime. *)
+      (fbracket _ f) · β = β •• U Z · (⦃ f · # (ptd_from_alg_functor (hs:=hsC) CP H) β ⦄)%prime.
+Definition ishssMor' {T :hss CP H} {T': hss'} (β : algebra_mor _ T T') : UU
+  :=   isbracketMor' (T:=T) (T':= T') β.
+
+Lemma fbracket_η' (T : hss') : ∏ {Z : Ptd} (f : Z --> ptd_from_alg T),
+   #U f = η T •• U Z · (⦃f⦄)%prime.
+Proof.
+  intros Z f.
+  (* assert (H' := parts_from_whole T Z f (fbracket _ f)) . *)
+  (* j'ai enlevé un pr1 *)
+  exact (pr1 (parts_from_whole' _ _ _ _  (pr2 ( (pr2 T Z f))))).
+Qed.
+Lemma fbracket_τ' (T : hss') : ∏ {Z : Ptd} (f : Z --> ptd_from_alg T),
+    (θ (`T ⊗ Z) · #H ⦃f⦄ · τ T
+    =
+    τ T •• U Z · ⦃f⦄)%prime.
+Proof.
+  intros Z f.
+  (* idem *)
+
+  exact (pr2 (parts_from_whole' _ _ _ _ (pr2 ((pr2 T Z f))))).
+Qed.
+
+Lemma ishssMor_InitAlg (T' : hss' ) :
+  @ishssMor' (* C hsC CP H *) InitHSS T'
            (InitialArrow IA (pr1 T') : @algebra_mor EndC Id_H InitAlg T' ).
 Proof.
 intros Z f.
@@ -565,10 +723,34 @@ pathvia (pr1 (pr1 X)).
         [| apply maponpaths, BinCoproductIn1Commutes_right_in_ctx_dir; simpl;
            rewrite id_left; apply BinCoproductIn1Commutes_right_dir, idpath].
       rewrite !assoc.
-      assert (fbracket_η_inst_c := nat_trans_eq_pointwise (fbracket_η T' (f· ptd_from_alg_mor _ hsC CP H β0)) c).
+      assert (fbracket_η_inst_c := nat_trans_eq_pointwise (fbracket_η' T' (f· ptd_from_alg_mor _ hsC CP H β0)) c).
       eapply pathscomp0; [| apply (!fbracket_η_inst_c)].
       apply cancel_postcomposition, (ptd_mor_commutes _ (ptd_from_alg_mor _ hsC CP H β0) ((pr1 Z) c)).
-    + (* now the difficult case *)
+    + (* now the diff(* Toplevel input, characters 6-17: *)
+(* > apply path_to_ctr. *)
+(* >       ^^^^^^^^^^^ *)
+(* Error: *)
+(* In environment *)
+(* C : precategory *)
+(* hs : has_homsets C *)
+(* CP : BinCoproducts C *)
+(* hsEndC := functor_category_has_homsets C C hs : has_homsets [C, C, hs] *)
+(* CPEndC := BinCoproducts_functor_precat C C CP hs : BinCoproducts [C, C, hs] *)
+(* H : Signature C hs C hs *)
+(* θ := theta H : θ_source H ⟹ θ_target H *)
+(* θ_strength1_int := Sig_strength_law1 C hs C hs H : θ_Strength1_int (pr1 (pr2 H)) *)
+(* θ_strength2_int := Sig_strength_law2 C hs C hs H : θ_Strength2_int (pr1 (pr2 H)) *)
+(* Id_H := BinCoproduct_of_functors [C, C, hs] [C, C, hs] CPEndC *)
+(*           (constant_functor [C, C, hs] [C, C, hs] (functor_identity C : [C, C, hs])) H *)
+(*      : [C, C, hs] ⟶ [C, C, hs] *)
+(* T : hss *)
+(* Z : Ptd *)
+(* f : Ptd ⟦ Z, p T ⟧ *)
+(* α : U Z ∙ `T ⟹ pr1 `T *)
+(* H1 : ∏ c : C, pr1 (# U f) c = pr1 (η T) ((pr1 (U Z)) c) · α c *)
+(* H2 : ∏ c : C, pr1 (θ (`T ⊗ Z)) c · pr1 (# H α) c · pr1 (τ T) c = pr1 (τ T) ((pr1 (U Z)) c) · α c *)
+(* Unable to unify "?M193 = pr1 (pr1 ?M192)" with "α = ⦃ f ⦄". *)
+icult case *)
       repeat rewrite <- assoc.
       apply BinCoproductIn2Commutes_right_in_ctx_dir.
       simpl.
@@ -602,7 +784,7 @@ pathvia (pr1 (pr1 X)).
         apply maponpaths.
         rewrite assoc.
         eapply pathsinv0.
-        assert (fbracket_τ_inst := fbracket_τ T' (f· ptd_from_alg_mor _ hsC CP H β0)).
+        assert (fbracket_τ_inst := fbracket_τ' T' (f· ptd_from_alg_mor _ hsC CP H β0)).
         assert (fbracket_τ_inst_c := nat_trans_eq_pointwise fbracket_τ_inst c); clear fbracket_τ_inst.
         apply fbracket_τ_inst_c.
       simpl.
@@ -613,11 +795,11 @@ pathvia (pr1 (pr1 X)).
       assert (Hyp:
                  ((# (pr1 (ℓ(U Z))) (# H β))·
                  (theta H) ((alg_carrier _  T') ⊗ Z)·
-                 # H (fbracket T' (f· ptd_from_alg_mor C hsC CP H β0))
+                 # H (fbracket' T' (f· ptd_from_alg_mor C hsC CP H β0))
                  =
                  θ (tpair (λ _ : functor C C, ptd_obj C) (alg_carrier _ (InitialObject IA)) Z) ·
                  # H (# (pr1 (ℓ(U Z))) β ·
-                 fbracket T' (f· ptd_from_alg_mor C hsC CP H β0)))).
+                 fbracket' T' (f· ptd_from_alg_mor C hsC CP H β0)))).
       Focus 2.
       assert (Hyp_c := nat_trans_eq_pointwise Hyp c); clear Hyp.
       exact Hyp_c.
@@ -637,7 +819,8 @@ pathvia (pr1 (pr1 X)).
       now apply (nat_trans_eq_pointwise Hyp c).
 Qed.
 
-Definition hss_InitMor : ∏ T' : hss CP H, hssMor InitHSS T'.
+(*
+Definition hss_InitMor : ∏ T' : hss', hssMor' InitHSS T'.
 Proof.
 intro T'.
 exists (InitialArrow IA (pr1 T')).
@@ -664,5 +847,6 @@ Lemma InitialHSS : Initial (hss_precategory CP H).
 Proof.
 apply (mk_Initial InitHSS), isInitial_InitHSS.
 Defined.
+*)
 
 End category_Algebra.

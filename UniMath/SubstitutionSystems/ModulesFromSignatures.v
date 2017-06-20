@@ -214,8 +214,8 @@ Section InitialRep.
 
   Let θ_strength1_int := Sig_strength_law1 _ _ _ _ H.
   Let θ_strength2_int := Sig_strength_law2 _ _ _ _ H.
-  Local Notation θ_nat_2_pw := (θ_nat_2_pointwise _ _ _ _ H (theta H)).
-  Local Notation θ_nat_1_pw := (θ_nat_1_pointwise _ _ _ _ H (theta H)).
+  Let θ_nat_2_pw := (θ_nat_2_pointwise _ _ _ _ H (theta H)).
+  Let θ_nat_1_pw := (θ_nat_1_pointwise _ _ _ _ H (theta H)).
 
   Let Id_H
     : functor EndC EndC
@@ -294,8 +294,122 @@ Section InitialRep.
     apply τ_M.
   Defined.
 
+  Lemma eq_η : SubstitutionSystems.η M_alg = (Monads.η  M:nat_trans _ _).
+    apply (nat_trans_eq hs).
+    intro x.
+    apply BinCoproductIn1Commutes.
+  Qed.
+
+  Lemma eq_τ : τ M_alg = (τ_M:nat_trans _ _).
+    apply (nat_trans_eq hs).
+    intro x.
+    apply BinCoproductIn2Commutes.
+  Qed.
+
+  (*
+  Lemma eq_p : p M_alg = ptd_from_mon hs M.
+  Proof.
+    cbn.
+    unshelve eapply (total2_paths_f ).
+    reflexivity.
+    cbn.
+    apply eq_η.
+  Qed.
+*)
+
+  Lemma bracket_prop' (Z : Ptd)( f : Ptd ⟦ Z, p M_alg ⟧)
+    : bracket_property' C hs CP H M_alg f
+                        (compose (C:=EndC) (  (M:functor _ _)∘(pr1 f):nat_trans (_  ∙ `M_alg)(_  ∙ `M_alg)) (μ M)).
+  Proof.
+    eapply whole_from_parts'.
+    split.
+    - rewrite eq_η, assoc.
+      apply (nat_trans_eq hs).
+      intro x.
+      etrans;revgoals.
+      {
+        (* eapply (cancel_postcomposition EndC (pr1 Z) (_  ∙ `M_alg) _ _ _ (μ M)). *)
+        apply cancel_postcomposition.
+        apply (nat_trans_ax (Monads.η M)).
+      }
+      rewrite <- assoc.
+      etrans; revgoals.
+      { apply cancel_precomposition.
+        eapply pathsinv0.
+        apply Monad_law1.
+      }
+      apply pathsinv0,id_right.
+    - rewrite eq_τ, functor_comp, assoc, assoc.
+      apply (nat_trans_eq hs).
+      intro x.
+      etrans;revgoals.
+      { apply cancel_postcomposition.
+        apply (nat_trans_ax τ_M).
+      }
+      etrans;revgoals.
+      { rewrite <- assoc.
+        apply cancel_precomposition.
+        eapply pathsinv0.
+        apply (LModule_Mor_σ _ τ_M).
+      }
+      rewrite assoc.
+      apply cancel_postcomposition.
+      etrans;[|eapply pathsinv0;apply assoc].
+      apply cancel_postcomposition.
+      apply pathsinv0.
+      assert (h:= ( (θ_nat_2_pw (M:functor _ _) Z _ f x))).
+      cbn in h.
+      rewrite (horcomp_id_postwhisker ) in h; try exact hs.
+      etrans;[|apply h].
+      apply cancel_precomposition.
+      clear h.
+      clear.
+      set (M' := M : functor _ _).
+      apply ( (@maponpaths _ (C⟦ (M'∙H M':functor _ _) x, (H (M' ∙ M'):functor _ _) x ⟧)
+                               (fun (X:nat_trans (functor_identity C) M') =>
+                                  ((theta H) ((M':EndC) ⊗ ((M',,X):Ptd))
+                                       :nat_trans _ _) x))).
+      apply pathsinv0,eq_η.
+  Qed.
+
+ Definition bracket_rep  : bracket' _ hs CP H M_alg.
+    intros Z f.
+    exists (compose (C:=EndC) (  (M:functor _ _)∘(pr1 f):nat_trans (_  ∙ `M_alg)(_  ∙ `M_alg)) (μ M)).
+    apply bracket_prop'.
+ Defined.
+  Definition rep_to_hss : hss' _ hs CP H := (M_alg,, bracket_rep).
+
+
   (** j : T --> M is the initial Id+H-algebra morphism *)
   Let j : Alg ⟦T_alg, M_alg⟧ := InitialArrow _ M_alg.
+  (** j is a monad morphism (following Ralph's proof). For the square diagram,
+     we show that both parts satisfies the same Mendler iterator characteristic equation*)
+  Let j_hss : ishssMor' C hs CP H (T:=T_hss) (T' :=rep_to_hss) j.
+    apply ishssMor_InitAlg.
+  Qed.
+  (* manque un whole_from/to_parts pour les hss_Mor *)
+
+  Lemma j_mon : Monad_Mor_laws (T:=T_mon) (T':=M) (mor_from_algebra_mor _ _ _ j).
+  Proof.
+    split.
+    - intro a.
+      specialize (j_hss _ (identity _)).
+      assert (h := (nat_trans_eq_pointwise j_hss a )).
+      etrans; [apply h|].
+      rewrite id_left.
+      apply  assoc.
+
+          kcbn in j_hss.
+
+      apply (nat_trans_eq_pointwise (a:= compose (C:=EndC)  (μ T_mon) j_mor)
+                                    (a':= compose(C:=EndC)
+                                                 (compose (C:=EndC)
+                                                          (a:=_∙_)
+                                                          (b:=_∙_)
+                                                          (c:=_∙_)
+                                                          (j_mor ø T_mon ) (M ∘ j_mor) )
+                                                 (μ M))).
+
 
 
   Let InitialEndC : Initial EndC.
